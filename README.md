@@ -147,4 +147,4 @@ The notebooks currently assume that the raw files are available at the Databrick
 ## Notes
 
 - A failed validation is a signal to investigate; it does not automatically mean the source data is wrong. Parsing errors, NULLs, duplicates, and genuine orphan records need to be distinguished.
-- The project is being built incrementally. This README describes work completed or observed so far and marks future stages as planned rather than complete.
+- The project is being built incrementally. This README describes work completed or observed so far and marks future stages as planned rather than complete
