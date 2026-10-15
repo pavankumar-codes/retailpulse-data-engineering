@@ -1,300 +1,150 @@
 # RetailPulse — End-to-End Retail Data Engineering Platform
 
-## 1. Project Overview
+RetailPulse is a hands-on data engineering project built around the Olist e-commerce dataset. The goal is to develop a reliable retail data platform while practicing data ingestion, profiling, data quality validation, relationship checks, and eventually lakehouse modeling and analytics.
 
-RetailPulse is an end-to-end data engineering project built using the Brazilian E-Commerce Public Dataset by Olist.
+## Project Goals
 
-The goal is to build a scalable retail data platform that processes raw e-commerce data, performs data-quality checks, models relationships between datasets, and prepares reliable data for downstream analytics.
+- Ingest and explore real-world retail CSV datasets.
+- Profile datasets to understand their size, schema, missing values, duplicates, and data-quality issues.
+- Validate candidate primary keys and foreign-key relationships.
+- Build toward a layered lakehouse architecture using Databricks, PySpark, SQL, and Delta Lake.
+- Document data-quality findings and design decisions as the project evolves.
 
-The project is being developed incrementally using Databricks, PySpark, SQL, and Delta Lake, with cloud integration and orchestration planned for later stages.
+## Technology Stack
 
-## 2. Technology Stack
+- **Platform:** Databricks
+- **Processing:** Apache Spark / PySpark
+- **Languages:** Python and SQL
+- **Source data:** Olist e-commerce dataset (CSV files)
+- **Version control:** Git and GitHub
+- **Planned next stages:** Delta Lake, Bronze/Silver/Gold layers, data modeling, and AWS integration
 
-| Technology | Purpose |
-|---|---|
-| Python | Data processing and validation logic |
-| PySpark | Distributed data processing |
-| Databricks | Development and execution environment |
-| SQL | Data querying and analysis |
-| Delta Lake | Planned storage format for curated datasets |
-| GitHub | Version control and project documentation |
-| AWS | Planned cloud integration |
-| Apache Airflow | Planned workflow orchestration |
-| Apache Kafka | Potential future streaming extension |
+> The project is under active development. Planned technologies and stages are not yet represented as completed implementations.
 
-## 3. Dataset Overview
+## Dataset
 
-The project uses nine CSV files from the Olist dataset.
+The project currently uses nine CSV files:
 
-| Dataset | Description |
-|---|---|
-| `olist_customers_dataset.csv` | Customer information |
-| `olist_orders_dataset.csv` | Order information and order lifecycle timestamps |
-| `olist_order_items_dataset.csv` | Products and sellers associated with orders |
-| `olist_order_payments_dataset.csv` | Payment information for orders |
-| `olist_order_reviews_dataset.csv` | Customer reviews and ratings |
-| `olist_products_dataset.csv` | Product attributes |
-| `olist_sellers_dataset.csv` | Seller information |
-| `olist_geolocation_dataset.csv` | Geographic information associated with postal-code prefixes |
-| `product_category_name_translation.csv` | Portuguese-to-English product category translation |
+1. `olist_customers_dataset.csv`
+2. `olist_geolocation_dataset.csv`
+3. `olist_order_items_dataset.csv`
+4. `olist_order_payments_dataset.csv`
+5. `olist_order_reviews_dataset.csv`
+6. `olist_orders_dataset.csv`
+7. `olist_products_dataset.csv`
+8. `olist_sellers_dataset.csv`
+9. `product_category_name_translation.csv`
 
-### Raw Data Location
+The raw files are stored in the Databricks volume:
 
-The CSV files are stored in a Databricks Volume:
+```text
+/Volumes/retailpulse/dev/olist_raw/
+```
 
-`/Volumes/retailpulse/dev/olist_raw/`
+The dataset includes customers, orders, order items, payments, reviews, products, sellers, geolocation, and product-category translations.
 
-## 4. Project Structure
-
-The current notebook organization separates profiling from key and relationship validation.
+## Repository Structure
 
 ```text
 retailpulse-data-engineering/
-│
 ├── notebooks/
 │   ├── 02_dataset_profiling.py
 │   └── 03_key_relationship_validation.py
-│
 └── README.md
 ```
 
-Additional notebooks and directories will be introduced as the project progresses.
+The notebook files are maintained as Databricks source notebooks. The repository structure may expand as the project progresses.
 
-## 5. Dataset Profiling
+## Work Completed So Far
 
-**Status: Completed initial profiling**
+### 1. Environment and project setup
 
-The nine datasets were individually inspected to understand their structure and data quality.
+- Created the GitHub repository and connected it to the Databricks workspace.
+- Set up the development catalog/schema and raw-data volume.
+- Uploaded the nine Olist CSV files.
+- Created notebooks for profiling and key/relationship validation.
 
-The profiling process included:
+### 2. Dataset profiling
 
-- Record and column counts
-- Column names and data types
-- NULL-value analysis
-- Exact duplicate-row analysis
-- Candidate primary-key uniqueness checks
-- Basic numeric validation
-- Timestamp and order-status checks
-- Initial identification of data-quality issues
+Notebook: `notebooks/02_dataset_profiling.py`
 
-### Initial Profiling Findings
+- Loaded and profiled the nine datasets.
+- Examined row counts, column counts, schemas, missing values, duplicate records, and selected domain-specific quality checks.
+- Identified data-quality items that need attention, including duplicate geolocation records, missing values in product/review data, and timestamp gaps in some orders.
 
-| Dataset | Records | Columns | Notable finding |
-|---|---:|---:|---|
-| Customers | 99,441 | 5 | 2,997 duplicate groups for `customer_unique_id`; `customer_id` had no NULLs or duplicate groups |
-| Orders | 99,441 | 8 | 160 NULL approval timestamps; 1,783 NULL carrier timestamps; 2,965 NULL customer-delivery timestamps |
-| Order Items | 112,650 | 7 | No duplicate groups for the composite key `(order_id, order_item_id)` |
-| Order Payments | 103,886 | 5 | No duplicate groups for the composite key `(order_id, payment_sequential)` |
-| Order Reviews | 104,162 | 7 | 85 exact duplicate rows; missing values and repeated key groups |
-| Products | 32,951 | 9 | 2,448 NULL cells across the dataset |
-| Sellers | 3,095 | 4 | No NULL cells found during initial profiling |
-| Geolocation | 1,000,163 | 5 | 261,831 exact duplicate rows |
-| Category Translation | 71 | 2 | No NULLs or exact duplicate rows in initial profiling |
+Selected observations from the profiling work:
 
-These are initial profiling results. Missing values and duplicate records require interpretation according to the relevant business rules; they should not automatically be removed.
+- `customers`: 99,441 rows; `customer_id` had no NULLs or duplicate key groups.
+- `orders`: 99,441 rows; `order_id` had no NULLs or duplicate key groups.
+- `order_items`: 112,650 rows; composite key `(order_id, order_item_id)` had no duplicate groups.
+- `order_payments`: 103,886 rows; composite key `(order_id, payment_sequential)` had no duplicate groups.
+- `products`: 32,951 rows; `product_id` was unique and non-NULL.
+- `sellers`: 3,095 rows; `seller_id` was unique and non-NULL.
+- `geolocation`: 1,000,163 rows; exact duplicate rows were observed and require a deliberate handling strategy.
+- The original review-file load produced suspicious column alignment and counts, which led to a separate CSV parsing investigation.
 
-## 6. Primary-Key Validation
+These are profiling observations from the development work, not a claim that all datasets have been cleaned.
 
-**Status: Automated validation implemented**
+### 3. Candidate key and relationship validation
 
-A reusable PySpark function, `validate_primary_key()`, was implemented to validate candidate primary keys.
+Notebook: `notebooks/03_key_relationship_validation.py`
 
-The function checks:
+The notebook is designed to:
 
-1. NULL values in candidate key columns.
-2. Duplicate groups for the candidate key.
-3. PASS/FAIL status based on those checks.
+- Check candidate keys for NULL values and duplicate key groups.
+- Support composite keys.
+- Check foreign-key NULLs and unmatched child records using left-anti joins.
+- Display validation results for configured relationships.
 
-The function supports both single-column and composite candidate keys.
+Relationships currently configured for validation:
 
-### Candidate Primary-Key Configuration
+- `orders.customer_id` → `customers.customer_id`
+- `order_items.order_id` → `orders.order_id`
+- `order_items.product_id` → `products.product_id`
+- `order_items.seller_id` → `sellers.seller_id`
+- `order_payments.order_id` → `orders.order_id`
+- `order_reviews.order_id` → `orders.order_id`
 
-| Dataset | Candidate key | Type |
-|---|---|---|
-| Customers | `customer_id` | Single-column |
-| Orders | `order_id` | Single-column |
-| Order Reviews | `review_id` | Single-column |
-| Products | `product_id` | Single-column |
-| Sellers | `seller_id` | Single-column |
-| Product Category Translation | `product_category_name` | Single-column |
-| Order Items | `(order_id, order_item_id)` | Composite |
-| Order Payments | `(order_id, payment_sequential)` | Composite |
+#### Review CSV parsing investigation
 
-No primary key has yet been confirmed for the geolocation dataset.
+The review file contains comments that can include quotation marks and line breaks. The default CSV load produced suspicious rows, NULL keys, and misleading relationship-validation failures.
 
-### Primary-Key Validation Results
+A revised Spark CSV reader configuration using multiline parsing and explicit quote handling returned **99,224 rows**, with zero NULLs in `review_id`, `order_id`, and `review_score` in the tested DataFrame. The `(review_id, order_id)` pair was unique across those 99,224 rows.
 
-| Dataset | Candidate key | NULL count | Duplicate groups | Status |
-|---|---|---:|---:|---|
-| Customers | `customer_id` | 0 | 0 | PASS |
-| Orders | `order_id` | 0 | 0 | PASS |
-| Order Reviews | `review_id` | 1 | 955 | FAIL |
-| Products | `product_id` | 0 | 0 | PASS |
-| Sellers | `seller_id` | 0 | 0 | PASS |
-| Product Category Translation | `product_category_name` | 0 | 0 | PASS |
+This is a promising correction, but the full validation notebook must be rerun and its final results reviewed. The difference from the earlier 104,162-row load is a parsing investigation finding; it should not be interpreted as proof that every source record was preserved until the load is fully reconciled.
 
-The composite-key candidates for order items and order payments are configured in the automated validation code. Their final results should be taken from the latest consolidated validation report.
+## Running the Notebooks
 
-### Important Finding: Order Reviews
+1. Open the repository in the connected Databricks workspace.
+2. Ensure the nine CSV files are available under `/Volumes/retailpulse/dev/olist_raw/`.
+3. Open and run `notebooks/02_dataset_profiling.py` to review dataset profiles.
+4. Open and run `notebooks/03_key_relationship_validation.py` to execute the candidate-key and relationship checks.
+5. Review the displayed validation results and investigate any failures before treating them as confirmed data-quality issues.
 
-The `review_id` candidate failed because it contains NULL values and duplicate groups.
+The notebooks currently assume that the raw files are available at the Databricks volume path above.
 
-Initial profiling also found:
+## Current Status
 
-- 85 exact duplicate rows.
-- 955 duplicate groups for `review_id`.
-- 951 duplicate groups for `order_id`.
-- 77 duplicate groups for the combination `(review_id, order_id)`.
+- [x] Databricks and GitHub setup
+- [x] Upload Olist source CSVs
+- [x] Initial profiling of the nine datasets
+- [x] Create candidate primary-key and foreign-key validation logic
+- [x] Investigate multiline CSV parsing for order reviews
+- [ ] Rerun and review the complete key/relationship validation results after the review parsing correction
+- [ ] Define data-quality rules and document resolutions
+- [ ] Design the retail data model / star schema
+- [ ] Implement Bronze, Silver, and Gold layers with Delta Lake
+- [ ] Add orchestration and cloud integration
 
-These findings indicate that further investigation is required before deciding how review records should be uniquely identified.
+## Next Steps
 
-## 7. Foreign-Key Validation
+1. Rerun `03_key_relationship_validation.py` from the top and review the complete output.
+2. Confirm the review-file load and investigate any remaining validation failures.
+3. Document candidate keys, foreign keys, and accepted data-quality rules.
+4. Design a retail analytical model and identify facts and dimensions.
+5. Begin implementing the lakehouse layers with Delta tables.
 
-**Status: Automated validation implemented**
+## Notes
 
-A reusable function, `validate_foreign_key()`, was implemented to check relationships between child and parent datasets.
-
-The function reports:
-
-- NULL foreign-key rows
-- Orphan rows whose non-NULL foreign-key values have no matching parent key
-- PASS/FAIL status
-- Child and parent dataset and column names
-
-A left anti join is used to identify orphan records.
-
-### Relationships Validated
-
-| Child dataset | Foreign key | Parent dataset | Referenced key |
-|---|---|---|---|
-| Orders | `customer_id` | Customers | `customer_id` |
-| Order Items | `order_id` | Orders | `order_id` |
-| Order Items | `product_id` | Products | `product_id` |
-| Order Items | `seller_id` | Sellers | `seller_id` |
-| Order Payments | `order_id` | Orders | `order_id` |
-| Order Reviews | `order_id` | Orders | `order_id` |
-
-### Foreign-Key Validation Results
-
-| Child dataset | Foreign key | NULL count | Orphan count | Status |
-|---|---|---:|---:|---|
-| Orders | `customer_id` | 0 | 0 | PASS |
-| Order Items | `order_id` | 0 | 0 | PASS |
-| Order Items | `product_id` | 0 | 0 | PASS |
-| Order Items | `seller_id` | 0 | 0 | PASS |
-| Order Payments | `order_id` | 0 | 0 | PASS |
-| Order Reviews | `order_id` | 2,236 | 2,702 | FAIL |
-
-### Important Finding: Order Reviews Relationship
-
-The relationship `order_reviews.order_id` → `orders.order_id` failed validation.
-
-The current report shows:
-
-- 2,236 rows with a NULL `order_id`.
-- 2,702 non-NULL orphan rows whose `order_id` does not match a record in the orders dataset.
-
-The cause has not yet been established. These records must be investigated before making any data corrections or deleting rows.
-
-The validation function currently treats any NULL foreign key as a failure. If a relationship permits NULLs, the rule will need to reflect that business requirement.
-
-## 8. Relationship Model
-
-The following diagram represents the intended relationships among the validated datasets.
-
-```mermaid
-erDiagram
-    CUSTOMERS ||--o{ ORDERS : places
-    ORDERS ||--o{ ORDER_ITEMS : contains
-    PRODUCTS ||--o{ ORDER_ITEMS : includes
-    SELLERS ||--o{ ORDER_ITEMS : supplies
-    ORDERS ||--o{ ORDER_PAYMENTS : has
-    ORDERS ||--o{ ORDER_REVIEWS : receives
-
-    CUSTOMERS {
-        string customer_id PK
-    }
-
-    ORDERS {
-        string order_id PK
-        string customer_id FK
-    }
-
-    ORDER_ITEMS {
-        string order_id PK, FK
-        int order_item_id PK
-        string product_id FK
-        string seller_id FK
-    }
-
-    ORDER_PAYMENTS {
-        string order_id PK, FK
-        int payment_sequential PK
-    }
-
-    ORDER_REVIEWS {
-        string review_id candidate
-        string order_id FK
-    }
-
-    PRODUCTS {
-        string product_id PK
-    }
-
-    SELLERS {
-        string seller_id PK
-    }
-```
-
-The diagram describes the intended logical model. It does not imply that every relationship has passed data validation. The order-review relationship remains unresolved.
-
-## 9. Engineering Practices Implemented
-
-The work completed so far demonstrates several data engineering practices:
-
-- Reusable PySpark validation functions
-- Configuration-driven validation
-- Automated processing across multiple datasets
-- Composite-key validation
-- NULL and duplicate-group checks
-- Left anti joins for referential-integrity checks
-- Consolidated validation reports using Spark DataFrames
-- Separation of profiling and relationship-validation notebooks
-- GitHub-based version control
-
-## 10. Current Project Status
-
-### Completed
-
-- Databricks environment and GitHub integration setup
-- Raw Olist dataset loading
-- Initial profiling of all nine datasets
-- Automated candidate primary-key validation
-- Composite-key support in the validation function
-- Automated validation of six candidate foreign-key relationships
-- Consolidated validation reports
-
-### In Progress
-
-- Investigating `order_reviews` primary-key and foreign-key failures
-- Confirming the composite-key validation results
-- Documenting the final relationship model
-- Completing and committing the Day 3 deliverables
-
-## 11. Future Roadmap
-
-The planned development phases are:
-
-1. Complete key and relationship validation.
-2. Design the retail analytical data model and star schema.
-3. Implement Bronze, Silver, and Gold data layers using Delta Lake.
-4. Develop data-cleaning and transformation pipelines.
-5. Implement incremental loading and appropriate Slowly Changing Dimension strategies.
-6. Integrate AWS services.
-7. Introduce orchestration using Apache Airflow.
-8. Explore streaming ingestion using Apache Kafka.
-9. Prepare curated datasets for analytics and reporting.
-
-## 12. Project Objective
-
-RetailPulse aims to demonstrate practical data engineering skills through a real-world e-commerce dataset, with emphasis on data quality, reliable transformations, scalable processing, version control, and a progressively developed lakehouse architecture.
+- A failed validation is a signal to investigate; it does not automatically mean the source data is wrong. Parsing errors, NULLs, duplicates, and genuine orphan records need to be distinguished.
+- The project is being built incrementally. This README describes work completed or observed so far and marks future stages as planned rather than complete.
